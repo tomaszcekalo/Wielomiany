@@ -182,78 +182,31 @@ static List<List<Double>> generatePopulation(List<List<Double>> staraPopulacja, 
 
 static List<List<Double>> optimizePopulation(List<List<Double>> olderPopulation, List<List<Double>> lastPopulation, List<Double> dopasowanieOld, List<Double> dopasowanieLast, int N)
 {
+    var combinedFitness = new List<(double Fitness, int Index, bool IsOld)>();
+
+    for (int i = 0; i < N; i++)
+    {
+        combinedFitness.Add((dopasowanieOld[i], i, true));
+    }
+
+    for (int i = 0; i < N; i++)
+    {
+        combinedFitness.Add((dopasowanieLast[i], i, false));
+    }
+
+    combinedFitness.Sort((a, b) => a.Fitness.CompareTo(b.Fitness));
+
     List<List<Double>> optimized = new List<List<Double>>();
-
-    int i, j, k, r;    
-
-    List<Double> sortOld = new List<double>();
-    List<Double> sortLast = new List<double>();
-    List<Double> sortOptimized = new List<double>();
-
-    sortOld = dopasowanieOld;
-    sortLast = dopasowanieLast;
-
-    sortOld.Sort();
-    sortLast.Sort();
-
-    // szukanie najlepszych N wyników
-    i = 0;
-    j = 0;
-    k = 0;
-    while (k < N)
+    for (int i = 0; i < N; i++)
     {
-        Double value = new Double();
-        Double bestLast = new Double();
-        value = sortOld[i];
-        bestLast = sortLast[j];
-        if (value < bestLast)
+        var (fitness, index, isOld) = combinedFitness[i];
+        if (isOld)
         {
-            sortOptimized.Add(value);
-            i++;
+            optimized.Add(olderPopulation[index]);
         }
         else
         {
-            sortOptimized.Add(bestLast);
-            j++;
-        }
-        k++;
-    }
-
-    // szukanie i najlepszych osobników z Old
-    k = 0;
-    r = 0;
-    while (k < i)
-    {
-        List<Double> item = new List<double>();
-        if (sortOld[k] == dopasowanieOld[r])
-        {
-            item = olderPopulation[r];
-            optimized.Add(item);
-            k++;
-            r = 0;
-        }
-        else
-        {
-            r++;
-        }
-    }
-
-    // szukanie j najlepszych osobników z Old
-    k = 0;
-    r = 0;
-    while (k < j)
-    {
-        List<Double> item = new List<double>();
-        if (sortLast[k] == dopasowanieLast[r])
-        {
-            item = lastPopulation[r];
-            optimized.Add(item);
-            k++;
-            r = 0;
-        }
-        else
-        {
-            r++;
+            optimized.Add(lastPopulation[index]);
         }
     }
 
@@ -261,12 +214,12 @@ static List<List<Double>> optimizePopulation(List<List<Double>> olderPopulation,
 }
 
 // START
-Double T = -1; // wspł. mutacji 0 - brak mutacji
-int max_k = 10; // number of iterations
+Double T = 0.2; // wspł. mutacji 0 - brak mutacji
+int max_k = 1000; // number of iterations
 int S = 3; //number of polynomials
 int k = 0; // algorithm iteration
 int i = 0; // iterator
-int N = 20; // number of individuals
+int N = 200; // number of individuals
 const string pathToFile = "C:\\Users\\smate\\Documents\\TestFile.txt";
 List<List<List<Double>>> populacje = new List<List<List<Double>>>(); // k N S
 List<List<Double>> wielomiany = openFile(pathToFile);
@@ -289,12 +242,9 @@ while (k < max_k)
 
     dopasowania.Add(dopasowanie(populacje[k],wielomiany)); // krok 4
 
-    populacje[k] =  optimizePopulation(populacje[k-1], populacje[k], dopasowania[k-1], dopasowania[k], N); // krok 5 naprawic optymalizacje
-    writeDopasowanie(dopasowania[k]);
+    populacje[k] =  optimizePopulation(populacje[k-1], populacje[k], dopasowania[k-1], dopasowania[k], N); // krok 5
+    //writeDopasowanie(dopasowania[k]);
     k++; // krok 6
 }
-
-
-//populacje.Add(generatePopulation(populacje[k-1], wielomiany));
-
+writeDopasowanie(dopasowania[k-1]);
 return;
