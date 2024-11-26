@@ -90,14 +90,6 @@ static List<List<Double>> createZeroPopulation(int S, int N)
     return populacjaZero;
 }
 
-/*
-static List<List<Double>> generatePopulation(List<Double> staraPopulacja, List<List<Double>> wielomiany)
-{
-    Random rnd = new Random();
-    List<List<Double>> populacjaNowa = new List<List<Double>>();
-    return populacjaNowa;
-}*/
-
 static List<Double> dopasowanie(List<List<Double>> populacja, List<List<Double>> wielomiany)
 {
     List<Double> dopasowanie = new List<Double>();
@@ -130,14 +122,154 @@ static List<Double> dopasowanie(List<List<Double>> populacja, List<List<Double>>
     return dopasowanie;
 }
 
+static List<List<Double>> generatePopulation(List<List<Double>> staraPopulacja, int N, int S, Double T)
+{
+    Random rnd = new Random();
+    List<List<Double>> populacjaNowa = new List<List<Double>>();
+
+    int m, n, r;
+    int i = 0, j;
+
+    while (i < N)// krzyżowanie
+    {
+        m = rnd.Next(0,N);
+        do
+        {
+            n = rnd.Next(0, N);
+        } while (n == m);
+
+        r = rnd.Next(0,S-1);
+
+        // Krzyżowanie wedlug reguły
+        List<Double> osobnik = new List<double>();
+        j = 0;
+        while ( j < r )
+        {
+            osobnik.Add(staraPopulacja[m][j]);
+            j++;
+        }
+        while (j < S)
+        {
+            osobnik.Add(staraPopulacja[n][j]);
+            j++;
+        }
+        populacjaNowa.Add(osobnik);
+
+        i++;
+    }
+
+    // mutacje
+    Double p;
+
+    i = 0;
+    while (i < N)
+    {
+        j = 0;
+        while (j < S)
+        {
+            p = rnd.NextDouble();
+            if (p < T)
+            {
+                populacjaNowa[i][j] = rnd.NextDouble() * 2 - 1;
+            }
+            j++;
+        }
+        i++;
+    }
+
+    return populacjaNowa;
+}
+
+static List<List<Double>> optimizePopulation(List<List<Double>> olderPopulation, List<List<Double>> lastPopulation, List<Double> dopasowanieOld, List<Double> dopasowanieLast, int N)
+{
+    List<List<Double>> optimized = new List<List<Double>>();
+
+    int i, j, k, r;    
+
+    List<Double> sortOld = new List<double>();
+    List<Double> sortLast = new List<double>();
+    List<Double> sortOptimized = new List<double>();
+
+    sortOld = dopasowanieOld;
+    sortLast = dopasowanieLast;
+
+    sortOld.Sort();
+    sortLast.Sort();
+
+    // szukanie najlepszych N wyników
+    i = 0;
+    j = 0;
+    k = 0;
+    while (k < N)
+    {
+        Double value = new Double();
+        Double bestLast = new Double();
+        value = sortOld[i];
+        bestLast = sortLast[j];
+        if (value < bestLast)
+        {
+            sortOptimized.Add(value);
+            i++;
+        }
+        else
+        {
+            sortOptimized.Add(bestLast);
+            j++;
+        }
+        k++;
+    }
+
+    // szukanie i najlepszych osobników z Old
+    k = 0;
+    r = 0;
+    while (k < i)
+    {
+        List<Double> item = new List<double>();
+        if (sortOld[k] == dopasowanieOld[r])
+        {
+            item = olderPopulation[r];
+            optimized.Add(item);
+            k++;
+            r = 0;
+        }
+        else
+        {
+            r++;
+        }
+    }
+
+    // szukanie j najlepszych osobników z Old
+    k = 0;
+    r = 0;
+    while (k < j)
+    {
+        List<Double> item = new List<double>();
+        if (sortLast[k] == dopasowanieLast[r])
+        {
+            item = lastPopulation[r];
+            optimized.Add(item);
+            k++;
+            r = 0;
+        }
+        else
+        {
+            r++;
+        }
+    }
+
+    return optimized;
+}
+
 // START
+Double T = -1; // wspł. mutacji 0 - brak mutacji
 int max_k = 10; // number of iterations
 int S = 3; //number of polynomials
 int k = 0; // algorithm iteration
 int i = 0; // iterator
 int N = 20; // number of individuals
+const string pathToFile = "C:\\Users\\smate\\Documents\\TestFile.txt";
 List<List<List<Double>>> populacje = new List<List<List<Double>>>(); // k N S
-List<List<Double>> wielomiany = openFile("C:\\Users\\smate\\Documents\\TestFile.txt");
+List<List<Double>> wielomiany = openFile(pathToFile);
 writePolynomial(wielomiany);
 List<List<Double>> populacjaZero = createZeroPopulation(S, N);
 populacje.Add(populacjaZero);
@@ -151,20 +283,18 @@ k = 1;
 
 // end of initialization
 
-//krok 3
+while (k < max_k)
+{
+    populacje.Add(generatePopulation(populacje[k-1], N, S, T)); //krok 3
 
-// krok 4 //dopasowania.Add(dopasowanie(populacje[k], wielomiany));
+    dopasowania.Add(dopasowanie(populacje[k],wielomiany)); // krok 4
 
-// krok 5
-
-// krok 6 //k=k+1
-
-// krok 7 (k<max_k) kontynuuj petle od 3 kroku
+    populacje[k] =  optimizePopulation(populacje[k-1], populacje[k], dopasowania[k-1], dopasowania[k], N); // krok 5 naprawic optymalizacje
+    writeDopasowanie(dopasowania[k]);
+    k++; // krok 6
+}
 
 
 //populacje.Add(generatePopulation(populacje[k-1], wielomiany));
-
-
-
 
 return;
