@@ -225,7 +225,7 @@ int S = 1024; //number of polynomials
 int k = 0; // algorithm iteration
 int i = 0; // iterator
 int N = 5; // number of individuals
-const string pathToFile = "C:\\Users\\smate\\Desktop\\computeFile.txt";// "C:\\Users\\smate\\Documents\\TestFile.txt";
+const string pathToFile = "computeFile.txt";// "C:\\Users\\smate\\Documents\\TestFile.txt";
 List<List<List<Double>>> populacje = new List<List<List<Double>>>(); // k N S
 List<List<Double>> wielomiany = openFile(pathToFile);
     //writePolynomial(wielomiany);
