@@ -1,6 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
+
+// zalozenia
+
+// tu wrzuce listy wszystkich parametrów aby jednym runem wykonac cale statystyki
 
 
 // funkcje
@@ -215,19 +220,19 @@ static List<List<Double>> optimizePopulation(List<List<Double>> olderPopulation,
 
 // START
 Double T = 0.2; // wspł. mutacji 0 - brak mutacji
-int max_k = 1000; // number of iterations
-int S = 3; //number of polynomials
+int max_k = 1024; // number of iterations
+int S = 1024; //number of polynomials
 int k = 0; // algorithm iteration
 int i = 0; // iterator
-int N = 200; // number of individuals
-const string pathToFile = "C:\\Users\\smate\\Documents\\TestFile.txt";
+int N = 5; // number of individuals
+const string pathToFile = "C:\\Users\\smate\\Desktop\\computeFile.txt";// "C:\\Users\\smate\\Documents\\TestFile.txt";
 List<List<List<Double>>> populacje = new List<List<List<Double>>>(); // k N S
 List<List<Double>> wielomiany = openFile(pathToFile);
-writePolynomial(wielomiany);
+    //writePolynomial(wielomiany);
 List<List<Double>> populacjaZero = createZeroPopulation(S, N);
 populacje.Add(populacjaZero);
 Console.WriteLine("Populacja 0:");
-writePopulation(populacje[0]);
+    //writePopulation(populacje[0]);
 Console.WriteLine();
 List<List<Double>> dopasowania = new List<List<double>>();
 dopasowania.Add(dopasowanie(populacje[k], wielomiany));
@@ -235,6 +240,7 @@ writeDopasowanie(dopasowania[k]);
 k = 1;
 
 // end of initialization
+Stopwatch stopwatch = Stopwatch.StartNew();
 
 while (k < max_k)
 {
@@ -246,5 +252,8 @@ while (k < max_k)
     //writeDopasowanie(dopasowania[k]);
     k++; // krok 6
 }
+stopwatch.Stop();
+Console.WriteLine($"Elapsed Time: {stopwatch.Elapsed.TotalMilliseconds} ms");
+Console.WriteLine("Dopasowanie ostateczne:");
 writeDopasowanie(dopasowania[k-1]);
 return;
