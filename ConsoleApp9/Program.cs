@@ -160,19 +160,21 @@ static async Task<List<Double>> dopasowanieRównolegleIloscTaskow(List<List<Doub
     Task<List<Double>>[] tasks = new Task<List<Double>>[N];
     for (int i = 0; i < N; i++)
     {
-        tasks[i] = dopasowanieRównolegleStartStop(populacja, wielomiany, i * populacja.Count() / N, (i + 1) * populacja.Count() / N);
+        tasks[i] = dopasowanieSzeregowoStartStop(populacja, wielomiany, i * populacja.Count() / N, (i + 1) * populacja.Count() / N);
     }
     var result = await Task.WhenAll(tasks);
     return result.SelectMany(x => x).ToList();
 }
-static async Task<List<Double>> dopasowanieRównolegleStartStop(List<List<Double>> populacja, List<List<Double>> wielomiany, int start, int stop)
+
+static async Task<List<Double>> dopasowanieSzeregowoStartStop(List<List<Double>> populacja, List<List<Double>> wielomiany, int start, int stop)
 {
     List<Double> dopasowanie = new List<Double>();
 
     int len = wielomiany.Count();
 
-    Parallel.ForEach(populacja, osobnik =>
+    for(int index_osobnika=start; index_osobnika < stop; index_osobnika++)
     {
+        var osobnik = populacja[index_osobnika];
         int i, j;
         Double wartosc;
 
@@ -193,7 +195,7 @@ static async Task<List<Double>> dopasowanieRównolegleStartStop(List<List<Double
             i++;
         }
         dopasowanie.Add(wartosc);
-    });
+    };
     return dopasowanie;
 }
 
@@ -301,6 +303,8 @@ ProgramSzeregowo();
 
 for (int iloscTaskow=2; iloscTaskow < 10; iloscTaskow++)
 {
+    Console.WriteLine();
+    Console.WriteLine("Ilosc taskow: " + iloscTaskow);
     await ProgramRownolegle(iloscTaskow);
 }
 void ProgramSzeregowo()
@@ -376,8 +380,8 @@ async Task ProgramRownolegle(int iloscTaskow)
     var populacje = new List<List<List<Double>>>(); // k N S
     var populacjaZero = createZeroPopulation(S, N);
     populacje.Add(populacjaZero);
-    Console.WriteLine("Populacja 0:");
     Console.WriteLine();
+    Console.WriteLine("Populacja 0:");
     List<List<Double>> dopasowania = [dopasowanieSzeregowo(populacje[0], wielomiany)];
     writeDopasowanie(dopasowania[0]);
     var k = 1;
