@@ -7,7 +7,6 @@ using System.Numerics;
 
 // tu wrzuce listy wszystkich parametrów aby jednym runem wykonac cale statystyki
 
-
 // funkcje
 
 static List<List<Double>> openFile(string path)
@@ -95,7 +94,7 @@ static List<List<Double>> createZeroPopulation(int S, int N)
     return populacjaZero;
 }
 
-static List<Double> dopasowanie(List<List<Double>> populacja, List<List<Double>> wielomiany)
+static List<Double> dopasowanieSzeregowo(List<List<Double>> populacja, List<List<Double>> wielomiany)
 {
     List<Double> dopasowanie = new List<Double>();
 
@@ -105,15 +104,15 @@ static List<Double> dopasowanie(List<List<Double>> populacja, List<List<Double>>
     foreach (List<Double> osobnik in populacja)
     {
         Double wartosc = new Double();
-        
+
         wartosc = 0;
         i = 0;
-        while(i < len)// pojedynczy wielomian
+        while (i < len)// pojedynczy wielomian
         {
             Double suma = new Double();
             suma = 0;
-            j = 0;    
-            while (j+1 < len) // wyliczanie wielomianu
+            j = 0;
+            while (j + 1 < len) // wyliczanie wielomianu
             {
                 suma = (suma + wielomiany[i][j]) * osobnik[i];
                 j++;
@@ -124,6 +123,79 @@ static List<Double> dopasowanie(List<List<Double>> populacja, List<List<Double>>
         }
         dopasowanie.Add(wartosc);
     }
+    return dopasowanie;
+}
+static List<Double> dopasowanieRównolegle(List<List<Double>> populacja, List<List<Double>> wielomiany)
+{
+    List<Double> dopasowanie = new List<Double>();
+
+    int len = wielomiany.Count();
+
+    Parallel.ForEach(populacja, osobnik =>
+    {
+        int i, j;
+        Double wartosc=0;
+        i = 0;
+        while (i < len)// pojedynczy wielomian
+        {
+            Double suma;
+            suma = 0;
+            j = 0;
+            while (j + 1 < len) // wyliczanie wielomianu
+            {
+                suma = (suma + wielomiany[i][j]) * osobnik[i];
+                j++;
+            }
+            suma += wielomiany[i][j];
+            wartosc += suma;
+            i++;
+        }
+        dopasowanie.Add(wartosc);
+    });
+    return dopasowanie;
+}
+
+static async Task<List<Double>> dopasowanieRównolegleIloscTaskow(List<List<Double>> populacja, List<List<Double>> wielomiany, int N)
+{
+    Task<List<Double>>[] tasks = new Task<List<Double>>[N];
+    for (int i = 0; i < N; i++)
+    {
+        tasks[i] = dopasowanieSzeregowoStartStop(populacja, wielomiany, i * populacja.Count() / N, (i + 1) * populacja.Count() / N);
+    }
+    var result = await Task.WhenAll(tasks);
+    return result.SelectMany(x => x).ToList();
+}
+
+static async Task<List<Double>> dopasowanieSzeregowoStartStop(List<List<Double>> populacja, List<List<Double>> wielomiany, int start, int stop)
+{
+    List<Double> dopasowanie = new List<Double>();
+
+    int len = wielomiany.Count();
+
+    for(int index_osobnika=start; index_osobnika < stop; index_osobnika++)
+    {
+        var osobnik = populacja[index_osobnika];
+        int i, j;
+        Double wartosc;
+
+        wartosc = 0;
+        i = 0;
+        while (i < len)// pojedynczy wielomian
+        {
+            Double suma = new Double();
+            suma = 0;
+            j = 0;
+            while (j + 1 < len) // wyliczanie wielomianu
+            {
+                suma = (suma + wielomiany[i][j]) * osobnik[i];
+                j++;
+            }
+            suma += wielomiany[i][j];
+            wartosc += suma;
+            i++;
+        }
+        dopasowanie.Add(wartosc);
+    };
     return dopasowanie;
 }
 
@@ -137,18 +209,18 @@ static List<List<Double>> generatePopulation(List<List<Double>> staraPopulacja, 
 
     while (i < N)// krzyżowanie
     {
-        m = rnd.Next(0,N);
+        m = rnd.Next(0, N);
         do
         {
             n = rnd.Next(0, N);
         } while (n == m);
 
-        r = rnd.Next(0,S-1);
+        r = rnd.Next(0, S - 1);
 
         // Krzyżowanie wedlug reguły
         List<Double> osobnik = new List<double>();
         j = 0;
-        while ( j < r )
+        while (j < r)
         {
             osobnik.Add(staraPopulacja[m][j]);
             j++;
@@ -185,7 +257,7 @@ static List<List<Double>> generatePopulation(List<List<Double>> staraPopulacja, 
     return populacjaNowa;
 }
 
-static List<List<Double>> optimizePopulation(List<List<Double>> olderPopulation, List<List<Double>> lastPopulation, List<Double> dopasowanieOld, List<Double> dopasowanieLast, int N)
+List<List<Double>> optimizePopulation(List<List<Double>> olderPopulation, List<List<Double>> lastPopulation, List<Double> dopasowanieOld, List<Double> dopasowanieLast, int N)
 {
     var combinedFitness = new List<(double Fitness, int Index, bool IsOld)>();
 
@@ -220,40 +292,115 @@ static List<List<Double>> optimizePopulation(List<List<Double>> olderPopulation,
 
 // START
 Double T = 0.2; // wspł. mutacji 0 - brak mutacji
-int max_k = 1024; // number of iterations
 int S = 1024; //number of polynomials
-int k = 0; // algorithm iteration
-int i = 0; // iterator
 int N = 5; // number of individuals
+int max_k = 1024; // number of iterations
 const string pathToFile = "computeFile.txt";// "C:\\Users\\smate\\Documents\\TestFile.txt";
-List<List<List<Double>>> populacje = new List<List<List<Double>>>(); // k N S
 List<List<Double>> wielomiany = openFile(pathToFile);
-    //writePolynomial(wielomiany);
-List<List<Double>> populacjaZero = createZeroPopulation(S, N);
-populacje.Add(populacjaZero);
-Console.WriteLine("Populacja 0:");
-    //writePopulation(populacje[0]);
-Console.WriteLine();
-List<List<Double>> dopasowania = new List<List<double>>();
-dopasowania.Add(dopasowanie(populacje[k], wielomiany));
-writeDopasowanie(dopasowania[k]);
-k = 1;
 
-// end of initialization
-Stopwatch stopwatch = Stopwatch.StartNew();
+ProgramSzeregowo();
+//await ProgramRownolegleForeach();
 
-while (k < max_k)
+for (int iloscTaskow=2; iloscTaskow < 10; iloscTaskow++)
 {
-    populacje.Add(generatePopulation(populacje[k-1], N, S, T)); //krok 3
-
-    dopasowania.Add(dopasowanie(populacje[k],wielomiany)); // krok 4
-
-    populacje[k] =  optimizePopulation(populacje[k-1], populacje[k], dopasowania[k-1], dopasowania[k], N); // krok 5
-    //writeDopasowanie(dopasowania[k]);
-    k++; // krok 6
+    Console.WriteLine();
+    Console.WriteLine("Ilosc taskow: " + iloscTaskow);
+    await ProgramRownolegle(iloscTaskow);
 }
-stopwatch.Stop();
-Console.WriteLine($"Elapsed Time: {stopwatch.Elapsed.TotalMilliseconds} ms");
-Console.WriteLine("Dopasowanie ostateczne:");
-writeDopasowanie(dopasowania[k-1]);
-return;
+void ProgramSzeregowo()
+{
+    int k = 0; // algorithm iteration
+    List<List<List<Double>>> populacje = new List<List<List<Double>>>(); // k N S
+    //writePolynomial(wielomiany);
+    List<List<Double>> populacjaZero = createZeroPopulation(S, N);
+    populacje.Add(populacjaZero);
+    Console.WriteLine("Populacja 0:");
+    //writePopulation(populacje[0]);
+    Console.WriteLine();
+    List<List<Double>> dopasowania = [dopasowanieSzeregowo(populacje[k], wielomiany)];
+    writeDopasowanie(dopasowania[k]);
+    k = 1;
+
+    // end of initialization
+    Stopwatch stopwatch = Stopwatch.StartNew();
+
+    while (k < max_k)
+    {
+        populacje.Add(generatePopulation(populacje[k - 1], N, S, T)); //krok 3
+
+        dopasowania.Add(dopasowanieSzeregowo(populacje[k], wielomiany)); // krok 4
+
+        populacje[k] = optimizePopulation(populacje[k - 1], populacje[k], dopasowania[k - 1], dopasowania[k], N); // krok 5
+                                                                                                                  //writeDopasowanie(dopasowania[k]);
+        k++; // krok 6
+    }
+    stopwatch.Stop();
+    Console.WriteLine($"Elapsed Time: {stopwatch.Elapsed.TotalMilliseconds} ms");
+    Console.WriteLine("Dopasowanie ostateczne:");
+    writeDopasowanie(dopasowania[k - 1]);
+}
+async Task ProgramRownolegleForeach()
+{
+    int k = 0; // algorithm iteration
+    List<List<List<Double>>> populacje = new List<List<List<Double>>>(); // k N S
+    //writePolynomial(wielomiany);
+    List<List<Double>> populacjaZero = createZeroPopulation(S, N);
+    populacje.Add(populacjaZero);
+    Console.WriteLine("Populacja 0:");
+    //writePopulation(populacje[0]);
+    Console.WriteLine();
+    List<List<Double>> dopasowania = [dopasowanieRównolegle(populacje[0], wielomiany)];
+    writeDopasowanie(dopasowania[k]);
+    k = 1;
+    var stopwatch = Stopwatch.StartNew();
+
+    while (k < max_k)
+    {
+        populacje.Add(generatePopulation(populacje[k - 1], N, S, T)); //krok 3
+
+        dopasowania.Add(dopasowanieRównolegle(populacje[k], wielomiany)); // krok 4
+
+        Console.WriteLine("populacje.count: " + populacje.Count);
+        Console.WriteLine("dopasowania.count: " + dopasowania.Count);
+        Console.WriteLine("k: " + k);
+        populacje[k] = optimizePopulation(populacje[k - 1], populacje[k], dopasowania[k - 1], dopasowania[k], N); // krok 5
+        //writeDopasowanie(dopasowania[k]);
+        k++; // krok 6
+    }
+    stopwatch.Stop();
+    Console.WriteLine($"Elapsed Time: {stopwatch.Elapsed.TotalMilliseconds} ms");
+    Console.WriteLine("Dopasowanie ostateczne:");
+    writeDopasowanie(dopasowania[k - 1]);
+
+}
+
+async Task ProgramRownolegle(int iloscTaskow)
+{
+    // rownolegle 2 taski
+    var populacje = new List<List<List<Double>>>(); // k N S
+    var populacjaZero = createZeroPopulation(S, N);
+    populacje.Add(populacjaZero);
+    Console.WriteLine();
+    Console.WriteLine("Populacja 0:");
+    List<List<Double>> dopasowania = [dopasowanieSzeregowo(populacje[0], wielomiany)];
+    writeDopasowanie(dopasowania[0]);
+    var k = 1;
+    var stopwatch = Stopwatch.StartNew();
+
+    while (k < max_k)
+    {
+        populacje.Add(generatePopulation(populacje[k - 1], N, S, T)); //krok 3
+
+        dopasowania.Add(await dopasowanieRównolegleIloscTaskow(populacje[k], wielomiany, iloscTaskow)); // krok 4
+
+        populacje[k] = optimizePopulation(populacje[k - 1], populacje[k], dopasowania[k - 1], dopasowania[k], N); // krok 5
+                                                                                                                  //writeDopasowanie(dopasowania[k]);
+        k++; // krok 6
+    }
+    stopwatch.Stop();
+    Console.WriteLine($"Elapsed Time: {stopwatch.Elapsed.TotalMilliseconds} ms");
+    Console.WriteLine("Dopasowanie ostateczne:");
+    writeDopasowanie(dopasowania[k - 1]);
+
+    return;
+}
